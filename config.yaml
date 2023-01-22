@@ -1,0 +1,13 @@
+backstage:
+  catalog:
+    providers:
+      kubernetes:
+        aws-prd:
+          cluster: aws-prd
+          schedule:
+            frequency: { minutes: 30 }
+            timeout: { minutes: 5 }
+          # resources: []
+          process:
+            namespace: true
+            defaultOwner: unknown
