@@ -75,6 +75,7 @@ export class KubernetesEntityProvider implements EntityProvider {
 
   async connect(connection: EntityProviderConnection): Promise<void> {
     this.connection = connection;
+    return await this.scheduleFn();
   }
 
   private createScheduleFn(taskRunner: TaskRunner): () => Promise<void> {
