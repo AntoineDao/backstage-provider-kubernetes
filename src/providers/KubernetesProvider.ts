@@ -3,10 +3,24 @@ import _ from 'lodash';
 import * as uuid from 'uuid';
 import { V1ObjectMeta } from '@kubernetes/client-node';
 import { PluginTaskScheduler, TaskRunner } from '@backstage/backend-tasks';
-import { DeferredEntity, EntityProvider, EntityProviderConnection } from "@backstage/plugin-catalog-backend";
-import { KubernetesBuilder, KubernetesEnvironment, ClusterDetails, KubernetesAuthTranslatorGenerator } from "@backstage/plugin-kubernetes-backend"
+import { 
+  KubernetesBuilder, ClusterDetails, 
+  KubernetesAuthTranslatorGenerator, 
+} from "@backstage/plugin-kubernetes-backend"
 import { KubernetesClient } from "../service/KubernetesClient";
-import { KubernetesEntityProviderConfig } from "./KubernetesEntityProviderConfig"
+import { KubernetesEntityProviderConfig, readProviderConfigs } from "./KubernetesEntityProviderConfig"
+import { Logger } from 'winston';
+import { Config } from '@backstage/config';
+import {
+  DeferredEntity,
+  EntityProvider,
+  EntityProviderConnection,
+} from '@backstage/plugin-catalog-node';
+
+type KubernetesEnvironment = {
+  logger: Logger;
+  config: Config;
+};
 
 export class KubernetesEntityProvider implements EntityProvider {
   private readonly clusterDetails: ClusterDetails;
@@ -19,20 +33,19 @@ export class KubernetesEntityProvider implements EntityProvider {
 
   static async fromConfig(
     env: KubernetesEnvironment,
-    providerConfigs: KubernetesEntityProviderConfig[],
     options: {
       logger: winston.Logger;
       schedule?: TaskRunner;
       scheduler?: PluginTaskScheduler;
     },
   ): Promise<KubernetesEntityProvider[]> {
+    // @ts-ignore
     const builder = new KubernetesBuilder(env)
     const { clusterSupplier } = await builder.build()
-
     const clusters = await clusterSupplier.getClusters()
     const clusterMap = _.mapValues(_.keyBy(clusters, 'name'))
-
-    return providerConfigs.map((p) => {
+    
+    return readProviderConfigs(env.config).map((p) => {
       const clusterConfig = clusterMap[p.cluster]
 
       if (!clusterConfig) {
@@ -145,7 +158,11 @@ export class KubernetesEntityProvider implements EntityProvider {
         metadata: {
           name: metadata.name as string,
           namespace: this.providerConfig.processor.namespaceOverride ?? metadata.namespace,
-          annotations: metadata.annotations,
+          annotations: {
+            ...metadata.annotations,
+            'backstage.io/managed-by-location': `url:https://${this.getProviderName()}`,
+            'backstage.io/managed-by-origin-location': `url:https://${this.getProviderName()}`,
+          },
           labels: metadata.labels
         },
         spec: {
@@ -161,6 +178,7 @@ export class KubernetesEntityProvider implements EntityProvider {
     const translator = KubernetesAuthTranslatorGenerator.getKubernetesAuthTranslatorInstance(
       this.clusterDetails.authProvider, { logger: this.logger }
     )
+
     return await translator.decorateClusterDetailsWithAuth(this.clusterDetails, {})
   }
 

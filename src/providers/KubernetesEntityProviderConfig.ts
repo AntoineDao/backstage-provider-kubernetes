@@ -79,7 +79,17 @@ function readProviderConfig(
 
   const cluster = config.getString('cluster');
 
-  const resources = config.getOptionalConfigArray('filters.resources') as unknown as ObjectToFetch[] ?? DEFAULT_OBJECTS;
+  const resourceConfigs = config.getOptionalConfigArray('filters.resources') ?? []
+  let resources = DEFAULT_OBJECTS;
+  if (resourceConfigs.length != 0) {
+    resources = resourceConfigs.map((r) => ({
+      group: r.getString('group'),
+      apiVersion: r.getString('apiVersion'),
+      plural: r.getString('plural'),
+      objectType: r.getString('objectType'),
+    } as ObjectToFetch));
+  }
+
   const namespace = config.getOptionalString('filters.namespace');
   const labelSelector = config.getOptionalString('filters.labelSelector');
 

@@ -21,11 +21,9 @@ import {
   User,
   bufferFromFileOrString,
 } from '@kubernetes/client-node';
-import lodash, { Dictionary } from 'lodash';
 import { Logger } from 'winston';
 import {
   ClusterDetails,
-  FetchResponseWrapper,
   ObjectToFetch
 } from '@backstage/plugin-kubernetes-backend';
 import {
@@ -91,7 +89,8 @@ export class KubernetesClient {
       (r: Response): Promise<FetchResult> =>
         r.ok
           ? r.json().then(
-            ({ items }): FetchResult => ({
+          //  @ts-ignore
+            ({ items  }): FetchResult => ({
               response: {
                 type: params.objectTypeToFetch.objectType,
                 resources: items,
@@ -99,6 +98,7 @@ export class KubernetesClient {
             }),
           )
           : {
+            // @ts-ignore
             response: {
               type: 'pods',
               resources: []
@@ -195,6 +195,7 @@ export class KubernetesClient {
     }
     return [url, requestInit];
   }
+  
   private fetchArgsInCluster(): [URL, RequestInit] {
     const kc = new KubeConfig();
     kc.loadFromCluster();
