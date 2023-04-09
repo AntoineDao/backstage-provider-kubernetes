@@ -3,9 +3,8 @@ import {
   TaskScheduleDefinition,
 } from '@backstage/backend-tasks';
 import { Config } from '@backstage/config';
-import {
-  ObjectToFetch
-} from '@backstage/plugin-kubernetes-backend';
+import { ObjectToFetch } from '@backstage/plugin-kubernetes-backend';
+
 
 const DEFAULT_OWNER = 'unknown';
 const DEFAULT_LIFECYCLE = 'production'
@@ -76,7 +75,6 @@ function readProviderConfig(
   id: string,
   config: Config,
 ): KubernetesEntityProviderConfig {
-
   const cluster = config.getString('cluster');
 
   const resourceConfigs = config.getOptionalConfigArray('filters.resources') ?? []
