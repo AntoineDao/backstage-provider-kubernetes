@@ -3,11 +3,12 @@ import _ from 'lodash';
 import * as uuid from 'uuid';
 import { V1ObjectMeta } from '@kubernetes/client-node';
 import { PluginTaskScheduler, TaskRunner } from '@backstage/backend-tasks';
-import { 
-  KubernetesBuilder, ClusterDetails, 
-  KubernetesAuthTranslatorGenerator, 
+import {
+  KubernetesBuilder,
+  ClusterDetails,
+  KubernetesAuthTranslatorGenerator,
+  KubernetesFetcher,
 } from "@backstage/plugin-kubernetes-backend"
-import { KubernetesClient } from "../service/KubernetesClient";
 import { KubernetesEntityProviderConfig, readProviderConfigs } from "./KubernetesEntityProviderConfig"
 import { Logger } from 'winston';
 import { Config } from '@backstage/config';
@@ -26,6 +27,7 @@ export class KubernetesEntityProvider implements EntityProvider {
   private readonly clusterDetails: ClusterDetails;
   private readonly providerConfig: KubernetesEntityProviderConfig
   private readonly scheduleFn: () => Promise<void>;
+  private readonly fetcher: KubernetesFetcher
 
   private readonly logger: winston.Logger
 
@@ -41,10 +43,9 @@ export class KubernetesEntityProvider implements EntityProvider {
   ): Promise<KubernetesEntityProvider[]> {
     // @ts-ignore
     const builder = new KubernetesBuilder(env)
-    const { clusterSupplier } = await builder.build()
+    const { clusterSupplier, fetcher } = await builder.build()
     const clusters = await clusterSupplier.getClusters()
     const clusterMap = _.mapValues(_.keyBy(clusters, 'name'))
-    
     return readProviderConfigs(env.config).map((p) => {
       const clusterConfig = clusterMap[p.cluster]
 
@@ -63,6 +64,7 @@ export class KubernetesEntityProvider implements EntityProvider {
         p,
         taskRunner,
         options.logger,
+        fetcher,
       )
     })
   }
@@ -72,6 +74,7 @@ export class KubernetesEntityProvider implements EntityProvider {
     providerConfig: KubernetesEntityProviderConfig,
     taskRunner: TaskRunner,
     logger: winston.Logger,
+    fetcher: KubernetesFetcher,
   ) {
     this.clusterDetails = clusterDetails
     this.providerConfig = providerConfig
@@ -79,6 +82,7 @@ export class KubernetesEntityProvider implements EntityProvider {
       target: this.getProviderName(),
     });
     this.scheduleFn = this.createScheduleFn(taskRunner);
+    this.fetcher = fetcher
 
   }
 
@@ -117,26 +121,24 @@ export class KubernetesEntityProvider implements EntityProvider {
       throw new Error('Not initialized');
     }
 
-    const client = new KubernetesClient({ logger: this.logger })
     const clusterDetails = await this.decorateDetailsWithAuth()
-    const results = await Promise.all(this.providerConfig.filters.resources.map((objectTypeToFetch) =>
-      client.fetchResources(
-        {
-          clusterDetails,
-          objectTypeToFetch,
-          labelSelector: this.providerConfig.filters.labelSelector,
-          namespace: this.providerConfig.filters.namespace,
-        }
-      )
-    ))
+    const objectTypesToFetch = new Set(this.providerConfig.filters.resources);
+    const results = await this.fetcher.fetchObjectsForService({
+      serviceId: '',
+      customResources: [],
+      clusterDetails,
+      objectTypesToFetch,
+      // Slight hack to prevent underlying function from setting `backstage.io/kubernetes-id=${params.serviceId}
+      labelSelector: this.providerConfig.filters.labelSelector ?? ' ',
+      namespace: this.providerConfig.filters.namespace,
+    })
 
-    const entities = results.map((result) => {
-      if (result.error) {
-        this.logger.error(`Failed to fetch objects from cluster`, result.error)
-      }
-
-      return result.response.resources.map((resource) => this.toEntity(resource, result.response.type))
-    }).flat()
+    results.errors.forEach((error) => {
+      this.logger.error(`Failed to fetch objects from cluster`, error)
+    })
+    const entities = results.responses.map(({ resources, type }) => (
+      resources.map((resource) => this.toEntity(resource, type))
+    )).flat()
 
     await this.connection.applyMutation({
       type: 'full',
