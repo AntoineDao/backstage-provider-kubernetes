@@ -1,12 +1,8 @@
 # Backstage Provider Kubernetes
-
-This is an Backstage plugin with entity providers to read Kubernetes objects as Backstage Entities.
-
+A Backstage plugin with entity providers to read Kubernetes objects as Backstage Entities.
 
 ## Getting started
-
 ### Installing The Plugin
-
 You will have to add the provider in the catalog initialization code of your backend. They are not installed by default, therefore you have to add a dependency on @antoinedao/backstage-provider-kubernetes to your backend package.
 
 ```console
@@ -37,7 +33,6 @@ export default async function createPlugin(
 ```
 
 ### Configuration
-
 Configuring the Backstage Kubernetes provider is managed in Backstage's `app-config.yaml` file and involves two steps:
 
 1. Defining remote Kubernetes cluster configuration and authentication methods. This re-uses the config definition for the [Backstage Kubernetes Plugin](https://backstage.io/docs/features/kubernetes/) which is documented [here](https://backstage.io/docs/features/kubernetes/configuration).
@@ -108,14 +103,17 @@ The Catalog Providers are defined in configuration file at the following path: `
 The values for each key are objects with the following properties:
 
 * `cluster` (required): a string that specifies the name of the Kubernetes cluster. It should match the name of the cluster inside the cluster locator methods defined in the global config at `kubernetes.clusterLocatorMethods.clusters.name`
+
 * `filters` (optional): an optional object that contains properties for filtering resources.
   * `resources` (optional): property is an optional array of any type of data. The default configuration fetches `[deployments, jobs, cronjobs, statefulsets, daemonsets]`
   * `namespace` (optional): property is an optional string that specifies a namespace to filter for
   * `labelSelector` (optional): property is an optional string that specifies a label selector.
+
 * `processor` (optional): an optional object that contains properties to populate required fields in the provided [Backtstage Components](https://backstage.io/docs/features/software-catalog/descriptor-format#kind-component)
   * `namespaceOverride`  (optional): set this to the [Backstage Namespace](https://backstage.io/docs/features/software-catalog/descriptor-format#namespace-optional) the Component should be assigned to. This will default to the Kubernetes object's `namespace` if left blank
   * `lifecyle` (optional): set this to specify the [Backstage Component Lifecycle](https://backstage.io/docs/features/software-catalog/descriptor-format#speclifecycle-required) property (defaults to `production`)
   * `defaultOwner` (optional): set this to specify the [Backstage Component Owner](https://backstage.io/docs/features/software-catalog/descriptor-format#specowner-required) property (defaults to `unknown`)
+  
 * `schedule` (optional): an optional object that contains properties for the schedule. The `TaskScheduleDefinitionConfig` interface is used to define the properties.
   * `frequency`: How often you want the task to run. The system does its best to avoid overlapping invocations.
   * `timeout`: The maximum amount of time that a single task invocation can take.
