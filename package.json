@@ -1,5 +1,5 @@
 {
-  "name": "@antoinedao/catalog-backend-module-kubernetes",
+  "name": "@antoinedao/backstage-provider-kubernetes",
   "description": "A Backstage catalog provider and processor for Kubernetes",
   "version": "0.1.0",
   "main": "src/index.ts",
@@ -16,7 +16,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/antoinedao/backstage-catalog-backend-module-kuberntes"
+    "url": "https://github.com/antoinedao/backstage-provider-kubernetes"
   },
   "keywords": [
     "backstage"
